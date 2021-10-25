@@ -150,23 +150,39 @@ func (c importCmd) Run(g globalCmd) error {
 			continue
 		}
 
-		cmd := exec.Command(g.Git, "config")
-		appendLocation(cmd, c.System, c.Global, c.Local, c.Worktree)
 		if value == "" {
+			// unset
+			cmd := exec.Command(g.Git, "config")
+			appendLocation(cmd, c.System, c.Global, c.Local, c.Worktree)
 			cmd.Args = append(cmd.Args, "--unset")
 			cmd.Args = append(cmd.Args, key)
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "ERROR: git: %v\n", err)
+				continue
+			}
 		} else {
+			// unset and add
+			cmd := exec.Command(g.Git, "config")
+			appendLocation(cmd, c.System, c.Global, c.Local, c.Worktree)
+			cmd.Args = append(cmd.Args, "--unset")
+			cmd.Args = append(cmd.Args, key)
+			cmd.Stderr = os.Stderr
+			_ /*IGNORE*/ = cmd.Run()
+
+			cmd = exec.Command(g.Git, "config")
+			appendLocation(cmd, c.System, c.Global, c.Local, c.Worktree)
 			cmd.Args = append(cmd.Args, "--add")
 			cmd.Args = append(cmd.Args, key)
 			cmd.Args = append(cmd.Args, value)
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "ERROR: git: %v\n", err)
+				continue
+			}
 		}
-		cmd.Stderr = os.Stderr
-		err = cmd.Run()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: git: %v\n", err)
-			continue
-		}
-
 	}
 
 	return nil
