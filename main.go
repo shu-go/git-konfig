@@ -26,6 +26,8 @@ type globalCmd struct {
 	Export exportCmd `help:"export to stdout" usage:"default secion is 'alias' only\nuse --all if you need"`
 	Import importCmd `help:"import from stdin(terminal: enter 2 empty lines to finish)"`
 
+	List listCmd `cli:"list,ls" help:"list items"`
+
 	Git string `default:"git" help:"git command"`
 }
 
@@ -188,7 +190,97 @@ func (c importCmd) Run(g globalCmd) error {
 	return nil
 }
 
-type scopedCmd struct {
+type listCmd struct {
+	Sections gli.StrList `cli:"section,s=LIST --all is ignored"`
+	All      bool        `help:"export all sections" default:"true"`
+}
+
+func (c listCmd) Run(g globalCmd, args []string) error {
+	scopes := []string{
+		"worktree",
+		"local",
+		"global",
+		"system",
+	}
+
+	type scopedValue struct {
+		scope, value string
+	}
+	values := make(map[string]([]scopedValue))
+
+	for _, scope := range scopes {
+		cmd := exec.Command(g.Git, "config", "--list")
+		cmd.Args = append(cmd.Args, "--"+scope)
+
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			return xerrors.Errorf("stdoutpipe: %v", err)
+		}
+
+		err = cmd.Start()
+		if err != nil {
+			return xerrors.Errorf("run: %v", err)
+		}
+
+		buf := bufio.NewReader(stdout)
+		for {
+			linebyte, _, err := buf.ReadLine()
+			if err != nil {
+				break
+			}
+
+			line := string(linebyte)
+
+			ok := false
+			if len(c.Sections) > 0 {
+				for _, s := range c.Sections {
+					if strings.HasPrefix(line, s+".") {
+						ok = true
+					}
+				}
+			} else if c.All {
+				ok = true
+			}
+			if !ok {
+				continue
+			}
+
+			kv := strings.Split(line, "=")
+			if len(kv) < 2 {
+				continue
+			}
+			if _, found := values[kv[0]]; found {
+				values[kv[0]] = append(values[kv[0]], scopedValue{
+					scope: scope,
+					value: kv[1],
+				})
+			} else {
+				values[kv[0]] = []scopedValue{
+					{
+						scope: scope,
+						value: kv[1],
+					},
+				}
+			}
+		}
+	}
+
+	var keys []string
+	for k, _ := range values {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+
+	for _, k := range keys {
+		fmt.Println(k)
+		for _, sv := range values[k] {
+			fmt.Printf("\t%s\t%s\n", sv.value, sv.scope)
+		}
+	}
+
+	return nil
 }
 
 func appendLocation(cmd *exec.Cmd, system, global, local, worktree bool) {
