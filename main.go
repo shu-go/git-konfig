@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/shu-go/gli"
 	"golang.org/x/xerrors"
 )
@@ -273,10 +274,17 @@ func (c listCmd) Run(g globalCmd, args []string) error {
 		return keys[i] < keys[j]
 	})
 
+	diffColor := color.New(color.FgRed)
 	for _, k := range keys {
 		fmt.Println(k)
+
+		first := values[k][0].value
 		for _, sv := range values[k] {
-			fmt.Printf("\t%s\t%s\n", sv.value, sv.scope)
+			if sv.value == first {
+				fmt.Printf("\t%s\t%s\n", sv.value, sv.scope)
+			} else {
+				diffColor.Printf("\t%s\t%s\n", sv.value, sv.scope)
+			}
 		}
 	}
 
