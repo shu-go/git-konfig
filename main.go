@@ -192,8 +192,14 @@ func (c importCmd) Run(g globalCmd) error {
 }
 
 type listCmd struct {
+	Diff bool `help:"output only those items that have different values for each scope"`
+
 	Sections gli.StrList `cli:"section,s=LIST --all is ignored"`
 	All      bool        `help:"export all sections" default:"true"`
+}
+
+type scopedValue struct {
+	scope, value string
 }
 
 func (c listCmd) Run(g globalCmd, args []string) error {
@@ -204,9 +210,6 @@ func (c listCmd) Run(g globalCmd, args []string) error {
 		"system",
 	}
 
-	type scopedValue struct {
-		scope, value string
-	}
 	values := make(map[string]([]scopedValue))
 
 	for _, scope := range scopes {
@@ -276,6 +279,11 @@ func (c listCmd) Run(g globalCmd, args []string) error {
 
 	diffColor := color.New(color.FgRed)
 	for _, k := range keys {
+		diff := differs(values[k])
+		if c.Diff && !diff {
+			continue
+		}
+
 		fmt.Println(k)
 
 		first := values[k][0].value
@@ -289,6 +297,24 @@ func (c listCmd) Run(g globalCmd, args []string) error {
 	}
 
 	return nil
+}
+
+func differs(values []scopedValue) bool {
+	diff := false
+
+	if len(values) == 0 {
+		return diff
+	}
+
+	first := values[0].value
+	for _, sv := range values {
+		if sv.value != first {
+			diff = true
+			break
+		}
+	}
+
+	return diff
 }
 
 func appendLocation(cmd *exec.Cmd, system, global, local, worktree bool) {
