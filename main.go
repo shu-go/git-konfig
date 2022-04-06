@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/shu-go/gli"
@@ -16,12 +15,6 @@ import (
 
 // Version is app version
 var Version string
-
-func init() {
-	if Version == "" {
-		Version = "dev-" + time.Now().Format("20060102")
-	}
-}
 
 type globalCmd struct {
 	Export exportCmd `help:"export to stdout" usage:"default secion is 'alias' only\nuse --all if you need"`
