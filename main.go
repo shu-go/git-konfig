@@ -17,25 +17,22 @@ import (
 var Version string
 
 type globalCmd struct {
-	Export exportCmd `help:"export to stdout" usage:"default secion is 'alias' only\nuse --all if you need"`
+	Export exportCmd `help:"export to stdout"  usage:"git konfig export [FILETER-EXPR...]"`
 	Import importCmd `help:"import from stdin(terminal: enter 2 empty lines to finish)"`
 
-	List listCmd `cli:"list,ls" help:"list items"`
+	List listCmd `cli:"list,ls" help:"list items" usage:"git konfig list [FILETER-EXPR...]"`
 
 	Git string `default:"git" help:"git command"`
 }
 
 type exportCmd struct {
-	Sections gli.StrList `cli:"section,s=LIST" default:"alias"`
-	All      bool        `help:"export all sections. --section is ignored"`
-
 	System   bool
 	Global   bool
 	Local    bool
 	Worktree bool
 }
 
-func (c exportCmd) Run(g globalCmd) error {
+func (c exportCmd) Run(g globalCmd, args []string) error {
 	cmd := exec.Command(g.Git, "config", "--list")
 	appendLocation(cmd, c.System, c.Global, c.Local, c.Worktree)
 
@@ -60,16 +57,8 @@ func (c exportCmd) Run(g globalCmd) error {
 
 		line := string(linebyte)
 
-		if !c.All {
-			ok := false
-			for _, s := range c.Sections {
-				if strings.HasPrefix(line, s+".") {
-					ok = true
-				}
-			}
-			if !ok {
-				continue
-			}
+		if !filterItem(line, args) {
+			continue
 		}
 
 		//fmt.Println(line)
@@ -186,9 +175,6 @@ func (c importCmd) Run(g globalCmd) error {
 
 type listCmd struct {
 	Diff bool `help:"output only those items that have different values for each scope"`
-
-	Sections gli.StrList `cli:"section,s=LIST --all is ignored"`
-	All      bool        `help:"export all sections" default:"true"`
 }
 
 type scopedValue struct {
@@ -228,17 +214,7 @@ func (c listCmd) Run(g globalCmd, args []string) error {
 
 			line := string(linebyte)
 
-			ok := false
-			if len(c.Sections) > 0 {
-				for _, s := range c.Sections {
-					if strings.HasPrefix(line, s+".") {
-						ok = true
-					}
-				}
-			} else if c.All {
-				ok = true
-			}
-			if !ok {
+			if !filterItem(line, args) {
 				continue
 			}
 
@@ -323,6 +299,22 @@ func appendLocation(cmd *exec.Cmd, system, global, local, worktree bool) {
 	if worktree {
 		cmd.Args = append(cmd.Args, "--worktree")
 	}
+}
+
+// returns true if the item is to be listed/exported.
+func filterItem(item string, filters []string) bool {
+	ok := true
+	if len(filters) > 0 {
+		someMatched := false
+		for _, a := range filters {
+			if strings.Contains(item, a) {
+				someMatched = true
+				break
+			}
+		}
+		ok = ok && someMatched
+	}
+	return ok
 }
 
 func main() {
