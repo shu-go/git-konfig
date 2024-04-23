@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/shu-go/gli"
+	"github.com/shu-go/gli/v2"
 	"golang.org/x/xerrors"
 )
 
