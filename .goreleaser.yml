@@ -25,12 +25,6 @@ builds:
       post: upx --lzma '{{ .Path }}'
 archives:
   - name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-    replacements:
-      darwin: darwin
-      linux: linux
-      windows: windows
-      386: 386
-      amd64: amd64
     format_overrides:
       - goos: windows
         format: zip
@@ -39,3 +33,17 @@ archives:
       - README*
 release:
   prerelease: auto
+changelog:
+  skip: false
+  filters:
+    exclude:
+    - '^test:'
+  groups:
+    - title: 'Features'
+      regexp: "^.*feat[(\\w)!]*:+.*$"
+      order: 0
+    - title: 'Bug fixes'
+      regexp: "^.*fix[(\\w)!]*:+.*$"
+      order: 1
+    - title: 'Others'
+      order: 999
