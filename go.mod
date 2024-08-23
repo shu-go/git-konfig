@@ -1,6 +1,6 @@
 module github.com/shu-go/git-konfig
 
-go 1.22
+go 1.23
 
 require (
 	github.com/fatih/color v1.16.0
